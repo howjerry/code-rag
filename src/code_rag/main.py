@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -54,6 +55,16 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down...")
+
+    # 等待背景索引任務完成
+    from code_rag.api.index import get_index_tasks
+    tasks = get_index_tasks()
+    if tasks:
+        logger.info("Waiting for %d background index task(s) to finish...", len(tasks))
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+    if _qdrant:
+        _qdrant.client.close()
     if _embedder:
         _embedder.close()
     if _state_db:

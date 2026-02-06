@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    qdrant_url: str = "http://localhost:6333"
+    qdrant_url: str = "http://localhost:6335"
     qdrant_collection: str = "code_chunks"
     ollama_url: str = "http://localhost:11434"
     embedding_model: str = "mxbai-embed-large"

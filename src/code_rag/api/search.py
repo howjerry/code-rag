@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Query
 
 from code_rag.config import settings
@@ -19,7 +21,7 @@ async def search(
     embedder = get_embedder()
     qdrant = get_qdrant()
 
-    query_vector = embedder.embed_single(q)
+    query_vector = await asyncio.to_thread(embedder.embed_single, q)
     results = qdrant.search(
         query_vector=query_vector,
         limit=limit,

@@ -26,6 +26,10 @@ def scan_files(project_path: Path) -> list[dict]:
     files = []
 
     for item in sorted(project_path.rglob("*")):
+        # 跳過 symlinks（避免無限遞迴）
+        if item.is_symlink():
+            continue
+
         # 跳過排除的目錄
         if any(should_exclude_dir(part) for part in item.parts):
             continue

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import threading
 import traceback
 
 from fastapi import APIRouter, HTTPException
@@ -11,6 +12,15 @@ from code_rag.indexer.pipeline import run_index
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# 背景索引任務追蹤
+_index_tasks: set[asyncio.Task] = set()
+_index_lock = threading.Lock()
+
+
+def get_index_tasks() -> set[asyncio.Task]:
+    """取得所有背景索引任務（供 shutdown 使用）。"""
+    return _index_tasks
 
 
 @router.post("/index", response_model=IndexStatus)
@@ -25,12 +35,12 @@ async def trigger_index(req: IndexRequest):
     # 路徑轉換
     container_path = str(settings.to_container_path(req.path))
 
-    # 檢查是否已在執行
-    status = state_db.get_index_status(req.project_name)
-    if status and status["status"] == "running":
-        raise HTTPException(400, f"Project '{req.project_name}' is already being indexed")
-
-    state_db.set_index_status(req.project_name, "pending")
+    # 原子化檢查與設定狀態
+    with _index_lock:
+        status = state_db.get_index_status(req.project_name)
+        if status and status["status"] == "running":
+            raise HTTPException(400, f"Project '{req.project_name}' is already being indexed")
+        state_db.set_index_status(req.project_name, "pending")
 
     # 背景執行索引
     async def _run():
@@ -42,7 +52,9 @@ async def trigger_index(req: IndexRequest):
             logger.error("Index failed for '%s': %s\n%s", req.project_name, e, traceback.format_exc())
             state_db.set_index_status(req.project_name, "failed", error=str(e))
 
-    asyncio.create_task(_run())
+    task = asyncio.create_task(_run())
+    _index_tasks.add(task)
+    task.add_done_callback(_index_tasks.discard)
 
     return IndexStatus(project_name=req.project_name, status="pending")
 

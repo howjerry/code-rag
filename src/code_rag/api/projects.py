@@ -41,6 +41,9 @@ async def delete_project(project_name: str):
     if not status:
         raise HTTPException(404, f"Project '{project_name}' not found")
 
+    if status["status"] == "running":
+        raise HTTPException(409, f"Project '{project_name}' is currently being indexed, cannot delete")
+
     qdrant.delete_by_project(project_name)
     state_db.remove_project(project_name)
     return {"message": f"Project '{project_name}' removed"}

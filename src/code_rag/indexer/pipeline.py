@@ -73,14 +73,12 @@ def run_index(
                 state_db.set_file_hash(project_name, relative_path, current_hash)
                 continue
 
-            # 先刪除此檔案的舊向量
-            qdrant.delete_by_file(project_name, relative_path)
-
-            # 嵌入
+            # 嵌入（先完成嵌入，確認成功後才刪除舊資料）
             texts = [c["content"] for c in chunks]
             vectors = embedder.embed_batch(texts)
 
-            # 寫入 Qdrant
+            # 刪除此檔案的舊向量，再寫入新的
+            qdrant.delete_by_file(project_name, relative_path)
             qdrant.upsert_chunks(chunks, vectors)
 
             # 更新 hash
