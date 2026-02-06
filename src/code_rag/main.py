@@ -23,17 +23,20 @@ _embedder: Embedder | None = None
 
 
 def get_qdrant() -> QdrantStorage:
-    assert _qdrant is not None
+    if _qdrant is None:
+        raise RuntimeError("QdrantStorage not initialized")
     return _qdrant
 
 
 def get_state_db() -> StateDB:
-    assert _state_db is not None
+    if _state_db is None:
+        raise RuntimeError("StateDB not initialized")
     return _state_db
 
 
 def get_embedder() -> Embedder:
-    assert _embedder is not None
+    if _embedder is None:
+        raise RuntimeError("Embedder not initialized")
     return _embedder
 
 

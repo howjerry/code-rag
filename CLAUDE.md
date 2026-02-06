@@ -32,7 +32,7 @@ uv run pytest tests/test_specific.py::test_name  # single test
 - **API** (`src/code_rag/api/`): FastAPI endpoints — index triggers, search queries, project management. Routes under `/api/v1/`.
 - **Indexer** (`src/code_rag/indexer/`): Orchestrated by `pipeline.py`. Scanner discovers files respecting .gitignore; chunker uses tree-sitter for 6 languages (Python, JS, TS, Go, C#, Rust) with text fallback; embedder calls Ollama `/api/embed`; hasher provides SHA256 for incremental indexing.
 - **Storage** (`src/code_rag/storage/`): `qdrant.py` wraps vector operations (COSINE distance, 1024 dims). `state.py` is a SQLite DB tracking file hashes and indexing status for incremental updates.
-- **Models** (`src/code_rag/models/`): Pydantic models for chunks, search results, index requests, and project metadata.
+- **Models** (`src/code_rag/models/`): Pydantic models for search results, index requests, and project metadata.
 
 ### Path translation
 
@@ -51,5 +51,4 @@ Pipeline compares SHA256 hashes against `state.db` — unchanged files are skipp
 ## Configuration
 
 - `src/code_rag/config.py`: Pydantic Settings, all configurable via environment variables
-- `config/projects.yaml`: Project registry (currently unused by API)
 - `.env`: Set `PROJECTS_DIR` to your local projects root directory

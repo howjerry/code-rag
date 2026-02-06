@@ -95,8 +95,6 @@ EXCLUDED_EXTENSIONS: set[str] = {
     ".eot",
     ".otf",
     ".map",
-    ".min.js",
-    ".min.css",
     ".db",
     ".sqlite",
     ".sqlite3",
@@ -118,9 +116,8 @@ def should_exclude_file(file_path: Path) -> bool:
     if file_path.name.endswith(".min.js") or file_path.name.endswith(".min.css"):
         return True
     try:
-        if file_path.stat().st_size > MAX_FILE_SIZE:
-            return True
-        if file_path.stat().st_size == 0:
+        size = file_path.stat().st_size
+        if size == 0 or size > MAX_FILE_SIZE:
             return True
     except OSError:
         return True

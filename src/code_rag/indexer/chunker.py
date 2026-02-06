@@ -99,24 +99,16 @@ def _extract_name(node: Node) -> str | None:
     return None
 
 
+_TYPE_MAP = {
+    "function": "function", "method": "function", "arrow": "function",
+    "class": "class", "interface": "interface", "trait": "interface",
+    "struct": "struct", "enum": "enum", "type": "type",
+    "impl": "impl", "mod": "module", "namespace": "module",
+}
+
+
 def _node_chunk_type(node_type: str) -> str:
-    if "function" in node_type or "method" in node_type or "arrow" in node_type:
-        return "function"
-    if "class" in node_type:
-        return "class"
-    if "interface" in node_type or "trait" in node_type:
-        return "interface"
-    if "struct" in node_type:
-        return "struct"
-    if "enum" in node_type:
-        return "enum"
-    if "type" in node_type:
-        return "type"
-    if "impl" in node_type:
-        return "impl"
-    if "mod" in node_type or "namespace" in node_type:
-        return "module"
-    return "code"
+    return next((v for k, v in _TYPE_MAP.items() if k in node_type), "code")
 
 
 def _collect_semantic_nodes(node: Node, language: str) -> list[Node]:
@@ -166,8 +158,8 @@ def chunk_code(
                     "name": None,
                 }
             ]
-        # 太大，fallback 到 text chunker
-        return []
+        # 太大，fallback 到固定大小切分
+        return split_lines(source, file_path, project_name, language, chunk_type="code")
 
     chunks = []
     lines = source.split("\n")
@@ -210,15 +202,14 @@ def chunk_code(
             })
         else:
             # 節點太大，按固定大小切分
-            node_lines = node_text.split("\n")
-            sub_chunks = _split_large_text(
-                node_lines,
-                base_line=node_start_line,
+            sub_chunks = split_lines(
+                node_text,
                 file_path=file_path,
                 project_name=project_name,
                 language=language,
                 chunk_type=_node_chunk_type(node.type),
                 name=_extract_name(node),
+                base_line=node_start_line,
                 start_index=len(chunks),
             )
             chunks.extend(sub_chunks)
@@ -244,20 +235,25 @@ def chunk_code(
     return chunks
 
 
-def _split_large_text(
-    lines: list[str],
-    base_line: int,
+def split_lines(
+    source: str,
     file_path: str,
     project_name: str,
     language: str,
-    chunk_type: str,
-    name: str | None,
-    start_index: int,
+    *,
+    chunk_type: str = "text",
+    name: str | None = None,
+    base_line: int = 0,
+    start_index: int = 0,
 ) -> list[dict]:
-    """將過大的文字按固定大小切分。"""
+    """將文字按固定大小在行邊界切分，帶 overlap。
+
+    同時用於 tree-sitter 過大節點的子切分和非程式碼檔案的 fallback 切分。
+    """
     max_chars = settings.chunk_max_chars
     overlap = settings.chunk_overlap_chars
-    chunks = []
+    lines = source.split("\n") if isinstance(source, str) else source
+    chunks: list[dict] = []
     current_lines: list[str] = []
     current_chars = 0
     start_line = 0

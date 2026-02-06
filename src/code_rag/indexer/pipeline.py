@@ -5,8 +5,7 @@ from pathlib import Path
 
 from code_rag.config import settings
 from code_rag.indexer.scanner import scan_files
-from code_rag.indexer.chunker import chunk_code
-from code_rag.indexer.text_chunker import chunk_text
+from code_rag.indexer.chunker import chunk_code, split_lines
 from code_rag.indexer.embedder import Embedder
 from code_rag.indexer.hasher import file_hash
 from code_rag.storage.qdrant import QdrantStorage
@@ -62,11 +61,8 @@ def run_index(
             # 分塊
             if supports_treesitter(language):
                 chunks = chunk_code(source, language, relative_path, project_name)
-                if not chunks:
-                    # tree-sitter 沒產出 chunks，fallback
-                    chunks = chunk_text(source, relative_path, project_name, language)
             else:
-                chunks = chunk_text(source, relative_path, project_name, language)
+                chunks = split_lines(source, relative_path, project_name, language)
 
             if not chunks:
                 processed += 1
