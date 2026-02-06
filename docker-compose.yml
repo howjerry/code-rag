@@ -1,0 +1,56 @@
+name: code-rag
+
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.13.2
+    container_name: code-rag-qdrant
+    restart: unless-stopped
+    ports:
+      - "6335:6333"
+      - "6336:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/localhost/6333' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+    networks:
+      - code-rag-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: code-rag-api
+    restart: unless-stopped
+    ports:
+      - "8100:8100"
+    volumes:
+      - ./src:/app/src
+      - ./config:/app/config
+      - ${PROJECTS_DIR:-~/Development}:/data/projects:ro
+      - app_state:/app/data
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION=code_chunks
+      - OLLAMA_URL=http://host.docker.internal:11434
+      - EMBEDDING_MODEL=mxbai-embed-large
+      - EMBEDDING_DIMS=1024
+      - STATE_DB_PATH=/app/data/state.db
+      - PROJECTS_BASE_PATH=/data/projects
+      - PROJECTS_HOST_PREFIX=${PROJECTS_HOST_PREFIX:-/Users/chc/Development}
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - code-rag-network
+
+volumes:
+  qdrant_storage:
+  app_state:
+
+networks:
+  code-rag-network:
+    driver: bridge
