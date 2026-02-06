@@ -29,7 +29,6 @@ services:
       - "8100:8100"
     volumes:
       - ./src:/app/src
-      - ./config:/app/config
       - ${PROJECTS_DIR:-~/Development}:/data/projects:ro
       - app_state:/app/data
     environment:

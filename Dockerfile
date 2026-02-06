@@ -17,7 +17,6 @@ RUN uv sync --no-dev --no-install-project
 
 # 複製原始碼（開發時會被 volume mount 覆蓋）
 COPY src/ ./src/
-COPY config/ ./config/
 
 EXPOSE 8100
 
